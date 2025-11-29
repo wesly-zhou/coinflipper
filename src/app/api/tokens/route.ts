@@ -7,106 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import type { Token } from '@/types';
+import { FALLBACK_TOKENS, SUPPORTED_NETWORKS, TOKEN_LIST_URLS } from '@/lib/constants';
+import type { SupportedNetwork, Token, TokenListToken } from '@/types';
 
-// Token list URLs (CoinGecko)
-const TOKEN_LIST_URLS = {
-    base: 'https://tokens.coingecko.com/base/all.json',
-    ethereum: 'https://tokens.coingecko.com/ethereum/all.json',
-} as const;
-
-const CHAIN_IDS = {
-    base: 8453,
-    ethereum: 1,
-} as const;
-
-// Fallback tokens in case CoinGecko API is down
-const FALLBACK_TOKENS: Token[] = [
-    // Base Network
-    {
-        id: 'base-eth',
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0x4200000000000000000000000000000000000006',
-        decimals: 18,
-        network: 'base',
-        logoUrl: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-    },
-    {
-        id: 'base-usdc',
-        symbol: 'USDC',
-        name: 'USD Coin',
-        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        decimals: 6,
-        network: 'base',
-        logoUrl: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png',
-    },
-    {
-        id: 'base-dai',
-        symbol: 'DAI',
-        name: 'Dai Stablecoin',
-        address: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
-        decimals: 18,
-        network: 'base',
-        logoUrl: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
-    },
-    {
-        id: 'base-usdt',
-        symbol: 'USDT',
-        name: 'Tether USD',
-        address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
-        decimals: 6,
-        network: 'base',
-        logoUrl: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
-    },
-    // Ethereum Network
-    {
-        id: 'ethereum-eth',
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-        decimals: 18,
-        network: 'ethereum',
-        logoUrl: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
-    },
-    {
-        id: 'ethereum-usdc',
-        symbol: 'USDC',
-        name: 'USD Coin',
-        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        decimals: 6,
-        network: 'ethereum',
-        logoUrl: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png',
-    },
-    {
-        id: 'ethereum-usdt',
-        symbol: 'USDT',
-        name: 'Tether USD',
-        address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-        decimals: 6,
-        network: 'ethereum',
-        logoUrl: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
-    },
-    {
-        id: 'ethereum-dai',
-        symbol: 'DAI',
-        name: 'Dai Stablecoin',
-        address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-        decimals: 18,
-        network: 'ethereum',
-        logoUrl: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
-    },
-];
-
-// CoinGecko token list response types
-interface TokenListToken {
-    chainId: number;
-    address: string;
-    name: string;
-    symbol: string;
-    decimals: number;
-    logoURI?: string;
-}
 
 interface TokenListResponse {
     name: string;
@@ -118,7 +21,7 @@ interface TokenListResponse {
  */
 async function fetchTokenList(network: 'base' | 'ethereum'): Promise<Token[]> {
     const url = TOKEN_LIST_URLS[network];
-    const chainId = CHAIN_IDS[network];
+    const chainId = SUPPORTED_NETWORKS.find(n => n.id === network)?.chainId;
 
     try {
         const response = await fetch(url, {
@@ -154,7 +57,7 @@ async function fetchTokenList(network: 'base' | 'ethereum'): Promise<Token[]> {
         console.log('Using fallback tokens for ${network}');
 
         // Return fallback tokens for this network
-        return FALLBACK_TOKENS.filter(token => token.network === network);
+        return FALLBACK_TOKENS[network];
     }
 }
 
@@ -180,7 +83,8 @@ export async function GET(request: NextRequest) {
         if (network) {
             // Fetch specific network
             tokens = await fetchTokenList(network);
-            usingFallback = tokens.length > 0 && tokens.every(t => FALLBACK_TOKENS.includes(t));
+
+            usingFallback = tokens.length === FALLBACK_TOKENS[network].length as number;
         } else {
             // Fetch both networks
             const [baseTokens, ethTokens] = await Promise.all([
@@ -190,8 +94,7 @@ export async function GET(request: NextRequest) {
             tokens = [...baseTokens, ...ethTokens];
 
             // Check if we're using all fallback tokens
-            const allFallback = tokens.every(t => FALLBACK_TOKENS.some(fb => fb.id === t.id));
-            usingFallback = allFallback && tokens.length === FALLBACK_TOKENS.length;
+            usingFallback = tokens.length === Object.values(FALLBACK_TOKENS).reduce((sum, arr) => sum + arr.length, 0);
         }
 
         return NextResponse.json({
@@ -207,13 +110,13 @@ export async function GET(request: NextRequest) {
         // Get network from params to filter fallback tokens
         const network = request.nextUrl.searchParams.get('network') as 'base' | 'ethereum' | null;
         const fallbackTokens = network
-            ? FALLBACK_TOKENS.filter(t => t.network === network)
-            : FALLBACK_TOKENS;
+            ? FALLBACK_TOKENS[network as SupportedNetwork]
+            : Object.values(FALLBACK_TOKENS).flat();
 
         return NextResponse.json({
             tokens: fallbackTokens,
-            count: fallbackTokens.length,
-            source: 'fallback',
+            count: fallbackTokens.length as number,
+            source: 'fallback' as const,
             error: 'API error, using fallback tokens',
             network: network || 'all',
         });

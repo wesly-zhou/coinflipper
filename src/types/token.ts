@@ -12,3 +12,13 @@ export interface Token {
     change24h?: number;
     logoUrl?: string;
 }
+
+// CoinGecko token list response types
+export interface TokenListToken {
+    chainId: number;
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+    logoURI?: string;
+}

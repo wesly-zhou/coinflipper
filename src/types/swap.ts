@@ -11,3 +11,5 @@ export interface SwapTransaction {
     timestamp: number;
     network: 'base' | 'ethereum';
 }
+
+export type SupportedNetwork = 'base' | 'ethereum';
