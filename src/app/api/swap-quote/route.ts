@@ -20,12 +20,24 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { CdpClient } from '@coinbase/cdp-sdk';
-
 import { formatAmountForCdp } from '@/lib/transformers';
-import { useWallets } from '@privy-io/react-auth';
+import { privy } from "@/lib/privy";
 
 export async function POST(request: NextRequest) {
     try {
+        const authToken = request.headers.get('authorization')?.replace('Bearer ', '');
+        if (!authToken) {
+            return NextResponse.json({ error: 'Missing access token' }, { status: 401 });
+          }
+
+        let userId: string;
+        try {
+            const verifiedClaims = await privy.utils().auth().verifyAuthToken(authToken);
+            userId = verifiedClaims.user_id;
+        } catch (err) {
+            return NextResponse.json({ error: 'Invalid access token' }, { status: 401 });
+        }
+
         // Parse request body
         const body = await request.json();
         const { fromToken, toToken, fromAmount, network, fromDecimals, slippageBps = 100 } = body;
@@ -50,20 +62,10 @@ export async function POST(request: NextRequest) {
 
         // Initialize CDP SDK
         const cdp = new CdpClient();
-
-        /*
-        WIP: Use Privy to create a Smart Account to use for the swap.
-        Need to create a CDP Smart Account to use the CDP SDK for the swap.
-        const { wallets } = useWallets();
-        const wallet = wallets[0];
-        const provider = await wallet.getEthereumProvider();
-
-        // Get or create CDP account for this user
-        // Each user should have a unique account name (e.g., based on their session/user ID)
-        const smartAccount = await cdp.evm.createSmartAccount({
-            owner: provider,
-        });
-        */
+    
+        // Get or create a hidden CDP smart account for this user
+        const owner = await cdp.evm.getOrCreateAccount({ name: `User-${userId}` });
+        const smartAccount = await cdp.evm.createSmartAccount({ owner });
 
         // Convert amount to atomic units
         const fromAmountBigInt = formatAmountForCdp(fromAmount, fromDecimals);
