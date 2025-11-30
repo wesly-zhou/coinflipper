@@ -50,11 +50,11 @@ async function fetchTokenList(network: 'base' | 'ethereum'): Promise<Token[]> {
                 logoUrl: token.logoURI,
             }));
 
-        console.log('Fetched ${tokens.length} tokens for ${network} from CoinGecko token list');
+        console.log(`Fetched ${tokens.length} tokens for ${network} from CoinGecko token list`);
         return tokens;
     } catch (error) {
-        console.error('Failed to fetch ${network} token list:', error);
-        console.log('Using fallback tokens for ${network}');
+        console.error(`Failed to fetch ${network} token list:`, error);
+        console.log(`Using fallback tokens for ${network}`);
 
         // Return fallback tokens for this network
         return FALLBACK_TOKENS[network];
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
             // Fetch specific network
             tokens = await fetchTokenList(network);
 
-            usingFallback = tokens.length === FALLBACK_TOKENS[network].length as number;
+            usingFallback = tokens.length === FALLBACK_TOKENS[network].length;
         } else {
             // Fetch both networks
             const [baseTokens, ethTokens] = await Promise.all([

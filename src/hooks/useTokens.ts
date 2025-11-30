@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Token, SupportedNetwork } from '@/types';
-import { SUPPORTED_NETWORKS, DEFAULT_NETWORK, TOKEN_LIST_URLS, FALLBACK_TOKENS } from '@/lib/constants';
+import { DEFAULT_NETWORK } from '@/lib/constants';
 
 interface UseTokensResult {
     tokens: Token[];
@@ -34,9 +34,9 @@ export function useTokens(initialNetwork: SupportedNetwork = DEFAULT_NETWORK): U
                 const data = await response.json();
                 setTokens(data.tokens);
             } catch (error) {
-                console.error('Failed to fetch ${network} token list:', error);
-                console.log('Using fallback tokens for ${network}');
-                setTokens(FALLBACK_TOKENS[network as SupportedNetwork]);
+                console.error('Error fetching tokens:', error);
+                setError('Failed to load tokens');
+                setTokens([]);
             } finally {
                 setLoading(false);
             }

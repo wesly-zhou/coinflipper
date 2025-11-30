@@ -1,5 +1,9 @@
 import { Token, SupportedNetwork } from '@/types';
 
+export const DEFAULT_SLIPPAGE_BPS = 100; // 1%
+export const PRICE_REFRESH_INTERVAL = 15000; // 15 seconds
+export const DEBOUNCE_DELAY = 500; // 500ms
+
 export const SUPPORTED_NETWORKS: { id: SupportedNetwork; name: string; chainId: number }[] = [
     { id: 'base', name: 'Base', chainId: 8453 },
     { id: 'ethereum', name: 'Ethereum', chainId: 1 },

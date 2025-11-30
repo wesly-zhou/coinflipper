@@ -2,7 +2,5 @@
 // Import using: import { Token, SwapTransaction } from '@/types'
 
 export * from './token'; // Token data structure
-export * from './swap'; // Swap transaction history
-
-// NOTE: For CDP SDK swap types, import directly from the SDK:
-// import type { GetSwapPriceResult } from '@coinbase/cdp-sdk/client/evm/evm.types'
+export * from './swap';  // Swap types
+export * from './misc';  // Miscellaneous types

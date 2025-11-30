@@ -19,9 +19,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CdpClient } from '@coinbase/cdp-sdk';
-import { formatAmountForCdp } from '@/lib/transformers';
+import { getCdpClient } from '@/lib/cdp';
+import { Address, SupportedNetwork } from '@/types';
 import { privy } from "@/lib/privy";
+import { DEFAULT_NETWORK, DEFAULT_SLIPPAGE_BPS } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
     try {
@@ -40,13 +41,13 @@ export async function POST(request: NextRequest) {
 
         // Parse request body
         const body = await request.json();
-        const { fromToken, toToken, fromAmount, network, fromDecimals, slippageBps = 100 } = body;
+        const { fromToken, toToken, fromAmount, network = DEFAULT_NETWORK, slippageBps = DEFAULT_SLIPPAGE_BPS } = body;
 
         // Validate required parameters
-        if (!fromToken || !toToken || !fromAmount || !network || !fromDecimals) {
+        if (!fromToken || !toToken || !fromAmount) {
             return NextResponse.json(
                 {
-                    error: 'Missing required fields: fromToken, toToken, fromAmount, network, fromDecimals',
+                    error: 'Missing required fields: fromToken, toToken, fromAmount',
                 },
                 { status: 400 }
             );
@@ -60,23 +61,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Initialize CDP SDK
-        const cdp = new CdpClient();
+        const cdp = getCdpClient();
     
         // Get or create a hidden CDP smart account for this user
         const owner = await cdp.evm.getOrCreateAccount({ name: `User-${userId}` });
         const smartAccount = await cdp.evm.createSmartAccount({ owner });
 
-        // Convert amount to atomic units
-        const fromAmountBigInt = formatAmountForCdp(fromAmount, fromDecimals);
-
         // Create swap quote using CDP account
         // This returns an executable quote object
         const swapQuote = await smartAccount.quoteSwap({
-            network: network as 'base' | 'ethereum',
-            fromToken: fromToken as `0x${string}`,
-            toToken: toToken as `0x${string}`,
-            fromAmount: fromAmountBigInt,
+            network: network as SupportedNetwork,
+            fromToken: fromToken as Address,
+            toToken: toToken as Address,
+            fromAmount: BigInt(fromAmount),
             slippageBps,
         });
 

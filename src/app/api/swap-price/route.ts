@@ -15,8 +15,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CdpClient } from '@coinbase/cdp-sdk';
+import { getCdpClient } from '@/lib/cdp';
 import { formatAmountForCdp } from '@/lib/transformers';
+import { DEFAULT_NETWORK } from '@/lib/constants';
+import { Address, SupportedNetwork } from '@/types';
 
 export async function GET(request: NextRequest) {
     try {
@@ -26,13 +28,25 @@ export async function GET(request: NextRequest) {
         const fromToken = searchParams.get('fromToken');
         const toToken = searchParams.get('toToken');
         const fromAmount = searchParams.get('fromAmount');
-        const network = searchParams.get('network') as 'base' | 'ethereum';
-        const fromDecimals = searchParams.get('fromDecimals');
+        const network = (searchParams.get('network') as SupportedNetwork) || DEFAULT_NETWORK;
+        const taker = searchParams.get('taker');
+        const fromDecimalsRaw = searchParams.get('fromDecimals');
 
         // Validate required parameters
-        if (!fromToken || !toToken || !fromAmount || !network || !fromDecimals) {
+        if (!fromToken || !toToken || !fromAmount || !fromDecimalsRaw) {
             return NextResponse.json(
-                { error: 'Missing required parameters: fromToken, toToken, fromAmount, network, fromDecimals' },
+                { error: 'Missing required parameters: fromToken, toToken, fromAmount, fromDecimals' },
+                { status: 400 }
+            );
+        }
+
+        const fromDecimals = Number(fromDecimalsRaw);
+        let atomicFromAmount: bigint;
+        try {
+            atomicFromAmount = formatAmountForCdp(fromAmount, fromDecimals);
+        } catch (err) {
+            return NextResponse.json(
+                { error: 'Invalid fromAmount', message: 'Could not parse decimal input' },
                 { status: 400 }
             );
         }
@@ -45,21 +59,31 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Initialize CDP SDK (reads API keys from env)
-        const cdp = new CdpClient();
+        // Validate fromAmount is a valid number
+        if (!/^\d+$/.test(fromAmount)) {
+            return NextResponse.json(
+                { error: 'Invalid fromAmount', message: 'fromAmount must be a positive integer (atomic units)' },
+                { status: 400 }
+            );
+        }
 
-        // Convert amount to atomic units
-        const decimals = parseInt(fromDecimals, 10);
-        const fromAmountBigInt = formatAmountForCdp(fromAmount, decimals);
+        const cdp = getCdpClient();
+    
+        // Get or create an account to use as the taker if not provided
+        let takerAddress = taker;
+        if (!takerAddress) {
+            const account = await cdp.evm.getOrCreateAccount({ name: 'SwapPriceAccount' });
+            takerAddress = account.address;
+        }
 
         // Get swap price from CDP
         // Note: For price estimates, taker address is used for simulation only
         const result = await cdp.evm.getSwapPrice({
-            fromToken: fromToken as `0x${string}`,
-            toToken: toToken as `0x${string}`,
-            fromAmount: fromAmountBigInt,
+            fromToken: fromToken as Address,
+            toToken: toToken as Address,
+            fromAmount: atomicFromAmount,
             network,
-            taker: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+            taker: takerAddress as Address,
         });
 
         // Check if liquidity is available
