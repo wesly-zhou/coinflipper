@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Token, SupportedNetwork } from '@/types';
 import { DEFAULT_NETWORK, POPULAR_TOKENS, SUPPORTED_NETWORKS, NETWORK_LOGOS } from '@/lib/constants';
 import { shortenAddress } from '@/lib/transformers';
+import type { TrendingResponse } from '@/types/coingecko';
 
 interface TokenSelectorProps {
   selectedToken: Token | null;
@@ -32,8 +33,31 @@ export default function TokenSelector({
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all');
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trendingSymbols, setTrendingSymbols] = useState<string[]>([]);
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch trending coins
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchTrending = async () => {
+      try {
+        const response = await fetch('/api/coingecko/trending');
+        if (response.ok) {
+          const data: TrendingResponse = await response.json();
+          // Extract symbols from trending coins (uppercase for matching)
+          const symbols = data.coins.map(coin => coin.item.symbol.toUpperCase());
+          setTrendingSymbols(symbols);
+        }
+      } catch (error) {
+        console.error('Error fetching trending coins:', error);
+        setTrendingSymbols([]);
+      }
+    };
+
+    fetchTrending();
+  }, [isOpen]);
 
   // Fetch tokens from selected network(s)
   useEffect(() => {
@@ -63,6 +87,28 @@ export default function TokenSelector({
     fetchTokens();
   }, [isOpen, networkFilter]);
 
+  // Get trending tokens by matching symbols
+  const trendingTokens = useMemo(() => {
+    if (trendingSymbols.length === 0) return [];
+
+    return tokens
+      .filter(token => {
+        // Exclude the excludeToken
+        if (excludeToken && token.address.toLowerCase() === excludeToken.address.toLowerCase()) {
+          return false;
+        }
+        // Match by symbol (case-insensitive)
+        return trendingSymbols.includes(token.symbol.toUpperCase());
+      })
+      .sort((a, b) => {
+        // Sort by trending order (earlier in trending list = higher priority)
+        const aIndex = trendingSymbols.indexOf(a.symbol.toUpperCase());
+        const bIndex = trendingSymbols.indexOf(b.symbol.toUpperCase());
+        return aIndex - bIndex;
+      })
+      .slice(0, 6); // Limit to top 6 trending tokens
+  }, [tokens, trendingSymbols, excludeToken]);
+
   // Get popular tokens based on network filter
   const popularTokens = useMemo(() => {
     // When "All" is selected, only show Ethereum tokens
@@ -81,6 +127,9 @@ export default function TokenSelector({
         if (networkFilter !== 'all' && token.network !== networkFilter) {
           return false;
         }
+        // Exclude tokens that are already in trending
+        const isTrending = trendingSymbols.includes(token.symbol.toUpperCase());
+        if (isTrending) return false;
         return popularAddresses.includes(token.address.toLowerCase());
       })
       .sort((a, b) => {
@@ -88,7 +137,7 @@ export default function TokenSelector({
         const bIndex = popularAddresses.indexOf(b.address.toLowerCase());
         return aIndex - bIndex;
       });
-  }, [tokens, networkFilter, excludeToken]);
+  }, [tokens, networkFilter, excludeToken, trendingSymbols]);
 
   // Sort and filter tokens (excluding popular ones from main list if not searching)
   const sortedAndFilteredTokens = useMemo(() => {
@@ -116,20 +165,25 @@ export default function TokenSelector({
           token.address.toLowerCase().includes(query)
       );
     } else {
-      // When not searching, exclude popular tokens from main list (they're shown separately)
+      // When not searching, exclude popular and trending tokens from main list (they're shown separately)
       // When "All" is selected, only consider Ethereum popular tokens
       const popularTokenList = networkFilter === 'all'
         ? POPULAR_TOKENS.ethereum
         : POPULAR_TOKENS[networkFilter] || [];
       const popularAddresses = popularTokenList.map(t => t.address.toLowerCase());
+      const trendingAddresses = trendingTokens.map(t => t.address.toLowerCase());
       filtered = filtered.filter(
-        token => !popularAddresses.includes(token.address.toLowerCase())
+        token => {
+          const isPopular = popularAddresses.includes(token.address.toLowerCase());
+          const isTrending = trendingAddresses.includes(token.address.toLowerCase());
+          return !isPopular && !isTrending;
+        }
       );
     }
 
     // Sort alphabetically
     return filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
-  }, [tokens, searchQuery, networkFilter, excludeToken]);
+  }, [tokens, searchQuery, networkFilter, excludeToken, trendingTokens]);
 
   // Close on Escape key
   useEffect(() => {
@@ -423,19 +477,110 @@ export default function TokenSelector({
               </div>
             )}
 
-            {/* Token list */}
-            <div className="max-h-96 overflow-y-auto">
-              {loading ? (
-                <div className="p-8 text-center">
-                  <div className="inline-block w-8 h-8 border-2 border-[#00DC82]/30 border-t-[#00DC82] rounded-full animate-spin" />
-                  <p className="mt-4 text-sm text-[#525252]">Loading tokens...</p>
+            {/* Trending Tokens - List format */}
+            {!searchQuery && trendingTokens.length > 0 && (
+              <div className="border-b border-[#1f1f1f]">
+                <div className="px-4 pt-4 pb-2">
+                  <h3 className="text-sm font-medium text-[#737373] mb-2 text-left">Trending</h3>
                 </div>
-              ) : sortedAndFilteredTokens.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-sm text-[#525252]">No tokens found</p>
+                <div className="max-h-96 overflow-y-auto">
+                  {trendingTokens.map(token => (
+                    <button
+                      key={`${token.network}-${token.address}`}
+                      onClick={() => handleSelect(token)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+                    >
+                      <div className="relative">
+                        {token.logoUrl ? (
+                          <img
+                            src={token.logoUrl}
+                            alt={token.symbol}
+                            className="w-10 h-10 rounded-full"
+                            onError={e => {
+                              (e.target as HTMLImageElement).src =
+                                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="%23333"/></svg>';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center">
+                            <span className="text-white font-medium text-sm">{token.symbol[0]}</span>
+                          </div>
+                        )}
+                        {/* Network badge */}
+                        {(NETWORK_LOGOS[token.network] || token.network === 'base') && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#141414] border border-[#262626] flex items-center justify-center overflow-hidden">
+                            {token.network === 'base' ? (
+                              // Base logo - blue circle with white inner circle and horizontal blue line
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-3 h-3"
+                              >
+                                {/* Outer blue circle */}
+                                <circle cx="12" cy="12" r="12" fill="#0052FF" />
+                                {/* Inner white circle */}
+                                <circle cx="12" cy="12" r="8" fill="white" />
+                                {/* Horizontal blue line - starts from left, extends 75% across */}
+                                <rect x="4" y="11" width="9" height="2" fill="#0052FF" />
+                              </svg>
+                            ) : (
+                              <img
+                                src={NETWORK_LOGOS[token.network]}
+                                alt={token.network}
+                                className="w-3 h-3 rounded-full"
+                                onError={e => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="font-medium text-white">{token.symbol}</div>
+                        <div className="text-sm text-[#525252] truncate">{token.name}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#525252] font-mono">
+                          {shortenAddress(token.address)}
+                        </span>
+                        <svg
+                          className="w-5 h-5 text-[#737373]"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                sortedAndFilteredTokens.map(token => (
+              </div>
+            )}
+
+            {/* Token list - only show when searching */}
+            {searchQuery && (
+              <div className="max-h-96 overflow-y-auto">
+                {loading ? (
+                  <div className="p-8 text-center">
+                    <div className="inline-block w-8 h-8 border-2 border-[#00DC82]/30 border-t-[#00DC82] rounded-full animate-spin" />
+                    <p className="mt-4 text-sm text-[#525252]">Loading tokens...</p>
+                  </div>
+                ) : sortedAndFilteredTokens.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <p className="text-sm text-[#525252]">No tokens found</p>
+                  </div>
+                ) : (
+                  sortedAndFilteredTokens.map(token => (
                 <button
                     key={`${token.network}-${token.address}`}
                     onClick={() => handleSelect(token)}
@@ -512,10 +657,11 @@ export default function TokenSelector({
                       />
                     </svg>
                   </div>
-                </button>
-              ))
+                  </button>
+                ))
+                )}
+              </div>
             )}
-            </div>
           </div>
         </div>
       )}
