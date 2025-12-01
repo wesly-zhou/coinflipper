@@ -106,7 +106,6 @@ export default function TokenSelector({
         const bIndex = trendingSymbols.indexOf(b.symbol.toUpperCase());
         return aIndex - bIndex;
       })
-      .slice(0, 6); // Limit to top 6 trending tokens
   }, [tokens, trendingSymbols, excludeToken]);
 
   // Get popular tokens based on network filter

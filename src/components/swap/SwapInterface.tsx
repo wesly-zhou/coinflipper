@@ -39,7 +39,8 @@ export default function SwapInterface({ initialToToken = null }: SwapInterfacePr
   const fromAmountAtomic = useMemo(() => {
     if (!fromAmount || !fromToken) return '0';
     try {
-      return formatAmountForCdp(fromAmount, fromToken.decimals);
+      const bigIntAmount = formatAmountForCdp(fromAmount, fromToken.decimals);
+      return bigIntAmount.toString(); // Convert BigInt to string for API
     } catch {
       return '0';
     }

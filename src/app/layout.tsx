@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'CoinFlipper',
-  description: 'CoinFlipper is a platform for swapping tokens on the blockchain, powered by Coinbase trade API, Gecko, and Privy.',
+  title: 'Coinflipper',
+  description: 'Coinflipper is a platform for swapping tokens on the blockchain, powered by Coinbase trade API, Gecko, and Privy.',
   icons: {
     icon: [
       { url: '/logo.png', type: 'image/png' },

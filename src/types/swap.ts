@@ -27,6 +27,7 @@ export interface GetSwapPriceOptions {
 
 /**
  * Result of getting a swap price.
+ * All BigInt values are serialized as strings for JSON compatibility.
  */
 export interface GetSwapPriceResult {
   /** Whether liquidity is available for the swap. */
@@ -35,22 +36,22 @@ export interface GetSwapPriceResult {
   toToken: Address;
   /** The token to send (source token). */
   fromToken: Address;
-  /** The amount to send in atomic units of the token. */
-  fromAmount: bigint;
-  /** The amount to receive in atomic units of the token. */
-  toAmount: bigint;
-  /** The minimum amount to receive after slippage in atomic units of the token. */
-  minToAmount: bigint;
-  /** The block number at which the liquidity conditions were examined. */
-  blockNumber: bigint;
+  /** The amount to send in atomic units of the token (as string). */
+  fromAmount: string;
+  /** The amount to receive in atomic units of the token (as string). */
+  toAmount: string;
+  /** The minimum amount to receive after slippage in atomic units of the token (as string). */
+  minToAmount: string;
+  /** The block number at which the liquidity conditions were examined (as string). */
+  blockNumber: string;
   /** The estimated fees for the swap. */
   fees: SwapFees;
   /** Potential issues discovered during validation. */
   issues: SwapIssues;
-  /** The gas estimate for the swap. */
-  gas?: bigint;
-  /** The gas price in Wei. */
-  gasPrice?: bigint;
+  /** The gas estimate for the swap (as string). */
+  gas?: string;
+  /** The gas price in Wei (as string). */
+  gasPrice?: string;
 }
 
 /**
@@ -97,6 +98,7 @@ export interface ExecuteSwapQuoteResult {
 
 /**
  * Result of creating a swap quote.
+ * All BigInt values are serialized as strings for JSON compatibility.
  */
 export interface CreateSwapQuoteResult {
   /** Whether liquidity is available for the swap. */
@@ -107,14 +109,14 @@ export interface CreateSwapQuoteResult {
   toToken: Address;
   /** The token to send (source token). */
   fromToken: Address;
-  /** The amount to send in atomic units of the token. */
-  fromAmount: bigint;
-  /** The amount to receive in atomic units of the token. */
-  toAmount: bigint;
-  /** The minimum amount to receive after slippage in atomic units of the token. */
-  minToAmount: bigint;
-  /** The block number at which the liquidity conditions were examined. */
-  blockNumber: bigint;
+  /** The amount to send in atomic units of the token (as string). */
+  fromAmount: string;
+  /** The amount to receive in atomic units of the token (as string). */
+  toAmount: string;
+  /** The minimum amount to receive after slippage in atomic units of the token (as string). */
+  minToAmount: string;
+  /** The block number at which the liquidity conditions were examined (as string). */
+  blockNumber: string;
   /** The estimated fees for the swap. */
   fees: SwapFees;
   /** Potential issues discovered during validation. */
@@ -125,12 +127,12 @@ export interface CreateSwapQuoteResult {
     to: Address;
     /** The transaction data. */
     data: Hex;
-    /** The value to send with the transaction in Wei. */
-    value: bigint;
-    /** The gas limit for the transaction. */
-    gas: bigint;
-    /** The gas price for the transaction in Wei. */
-    gasPrice: bigint;
+    /** The value to send with the transaction in Wei (as string). */
+    value: string;
+    /** The gas limit for the transaction (as string). */
+    gas: string;
+    /** The gas price for the transaction in Wei (as string). */
+    gasPrice: string;
   };
   /** Permit2 data if required for the swap. */
   permit2?: {
@@ -148,10 +150,11 @@ export interface CreateSwapQuoteResult {
 
 /**
  * A fee in a specific token.
+ * BigInt values are serialized as strings for JSON compatibility.
  */
 export interface TokenFee {
-  /** The amount of the fee in atomic units of the token. */
-  amount: bigint;
+  /** The amount of the fee in atomic units of the token (as string). */
+  amount: string;
   /** The contract address of the token that the fee is paid in. */
   token: Address;
 }
@@ -168,24 +171,26 @@ export interface SwapFees {
 
 /**
  * Details of allowance issues for a swap.
+ * BigInt values are serialized as strings for JSON compatibility.
  */
 export interface SwapAllowanceIssue {
-  /** The current allowance of the fromToken by the taker. */
-  currentAllowance: bigint;
+  /** The current allowance of the fromToken by the taker (as string). */
+  currentAllowance: string;
   /** The address to set the allowance on. */
   spender: Address;
 }
 
 /**
  * Details of balance issues for a swap.
+ * BigInt values are serialized as strings for JSON compatibility.
  */
 export interface SwapBalanceIssue {
   /** The contract address of the token. */
   token: Address;
-  /** The current balance of the fromToken by the taker. */
-  currentBalance: bigint;
-  /** The amount of the token that the taker must hold. */
-  requiredBalance: bigint;
+  /** The current balance of the fromToken by the taker (as string). */
+  currentBalance: string;
+  /** The amount of the token that the taker must hold (as string). */
+  requiredBalance: string;
 }
 
 /**
@@ -205,12 +210,12 @@ export interface SwapTransaction {
   id: string;
   fromToken: string;
   toToken: string;
-  fromAmount: string;
-  toAmount: string;
+    fromAmount: string;
+    toAmount: string;
   txHash?: string;
   status: 'pending' | 'completed' | 'failed';
-  timestamp: number;
+    timestamp: number;
   network: 'base' | 'ethereum';
-}
+  }
 
 export type SupportedNetwork = 'base' | 'ethereum';
