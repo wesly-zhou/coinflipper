@@ -12,7 +12,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0D0D0D]">
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-16 pb-12">
+      <section className="relative overflow-hidden pt-24 pb-12">
         {/* Background gradient effects */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D] via-[#0D0D0D] to-[#141414]" />
         
