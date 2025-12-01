@@ -143,13 +143,13 @@ export function formatNumber(num: number | string, decimals: number = 2): string
 
 /**
  * Shorten an address for display
+ * Shows "0x" + 2 characters + "..." + 4 characters at the end
  * @param address - Full Ethereum address
- * @param chars - Number of characters to show on each side (default: 4)
- * @returns Shortened address (e.g., "0x1234...5678")
- * @example shortenAddress("0x1234567890123456789012345678901234567890") // "0x1234...7890"
- * @example shortenAddress("0x1234567890123456789012345678901234567890", 6) // "0x123456...567890"
+ * @returns Shortened address (e.g., "0x12...7890")
+ * @example shortenAddress("0x1234567890123456789012345678901234567890") // "0x12...7890"
  */
-export function shortenAddress(address: string, chars: number = 4): string {
-  if (!address || address.length < chars * 2 + 2) return address;
-  return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
+export function shortenAddress(address: string): string {
+  if (!address || address.length < 8) return address;
+  // Show "0x" + 2 chars + "..." + 4 chars at end
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }

@@ -1,8 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import SwapInterface from '@/components/swap/SwapInterface';
+import TokenSelector from '@/components/swap/TokenSelector';
+import { Token } from '@/types';
+import { DEFAULT_NETWORK } from '@/lib/constants';
 
 export default function Home() {
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+
   return (
     <div className="min-h-screen bg-[#0D0D0D]">
       {/* Hero Section */}
@@ -54,13 +60,27 @@ export default function Home() {
           <p className="text-[#737373] text-lg mb-8">
             Trade tokens across Base and Ethereum networks
           </p>
+          
+          {/* Search Bar - Only show when no token is selected */}
+          {!selectedToken && (
+            <div className="max-w-xl mx-auto">
+              <TokenSelector
+                selectedToken={null}
+                onSelect={setSelectedToken}
+                variant="search"
+                network={DEFAULT_NETWORK}
+              />
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Swap Interface */}
-      <section className="max-w-[600px] mx-auto px-6 pb-20">
-        <SwapInterface />
-      </section>
+      {/* Swap Interface - Only show when a token is selected */}
+      {selectedToken && (
+        <section id="swap-interface" className="max-w-[600px] mx-auto px-6 pb-20">
+          <SwapInterface initialToToken={selectedToken} />
+        </section>
+      )}
     </div>
   );
 }

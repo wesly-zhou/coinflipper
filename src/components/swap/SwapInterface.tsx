@@ -1,34 +1,39 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Token, SupportedNetwork } from '@/types';
 import { useTokens } from '@/hooks/useTokens';
 import { useSwapPrice } from '@/hooks/useSwapPrice';
 import { formatAmountForCdp, formatTokenAmount } from '@/lib/transformers';
-import { DEFAULT_NETWORK, SUPPORTED_NETWORKS } from '@/lib/constants';
+import { DEFAULT_NETWORK } from '@/lib/constants';
 import TokenSelector from './TokenSelector';
 import PriceDisplay from '@/components/price/PriceDisplay';
 import { Button } from '@/components/ui';
 import { Address } from '@/types';
 
-export default function SwapInterface() {
+interface SwapInterfaceProps {
+  initialToToken?: Token | null;
+}
+
+export default function SwapInterface({ initialToToken = null }: SwapInterfaceProps) {
   const [network, setNetwork] = useState<SupportedNetwork>(DEFAULT_NETWORK);
   const [fromToken, setFromToken] = useState<Token | null>(null);
-  const [toToken, setToToken] = useState<Token | null>(null);
+  const [toToken, setToToken] = useState<Token | null>(initialToToken);
   const [fromAmount, setFromAmount] = useState('');
   const [isSwapping, setIsSwapping] = useState(false);
 
   const { tokens, loading: tokensLoading } = useTokens(network);
 
-  // Initialize default tokens when tokens load
-  useMemo(() => {
-    if (tokens.length > 0 && !fromToken) {
-      const weth = tokens.find((t) => t.symbol === 'WETH');
-      const usdc = tokens.find((t) => t.symbol === 'USDC');
-      if (weth) setFromToken(weth);
-      if (usdc) setToToken(usdc);
+  // Update toToken when initialToToken changes
+  useEffect(() => {
+    if (initialToToken) {
+      setToToken(initialToToken);
+      // Also update network if token is from a different network
+      if (initialToToken.network !== network) {
+        setNetwork(initialToToken.network);
+      }
     }
-  }, [tokens, fromToken]);
+  }, [initialToToken, network]);
 
   // Convert human-readable amount to atomic units for API
   const fromAmountAtomic = useMemo(() => {
@@ -51,7 +56,7 @@ export default function SwapInterface() {
     toToken: toToken?.address as Address || null,
     fromAmount: fromAmountAtomic as string,
     network,
-    enabled: !!fromToken && !!toToken && fromAmountAtomic !== '0',
+    enabled: !!fromToken && !!toToken && !!fromAmount && parseFloat(fromAmount) > 0 && fromAmountAtomic !== '0',
   });
 
   // Calculate the "to" amount to display
@@ -69,14 +74,6 @@ export default function SwapInterface() {
     setFromAmount(tempAmount);
   }, [fromToken, toToken, toAmount]);
 
-  // Handle network change
-  const handleNetworkChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newNetwork = e.target.value as SupportedNetwork;
-    setNetwork(newNetwork);
-    setFromToken(null);
-    setToToken(null);
-    setFromAmount('');
-  }, []);
 
   // Handle from amount change with input validation
   const handleFromAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,44 +137,38 @@ export default function SwapInterface() {
       {/* Card Container */}
       <div className="bg-[#141414] border border-[#1f1f1f] rounded-2xl p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
           <h2 className="text-xl font-semibold text-white">Swap</h2>
-          
-          {/* Network Selector */}
-          <select
-            value={network}
-            onChange={handleNetworkChange}
-            className="bg-[#1A1A1A] text-white text-sm rounded-xl px-4 py-2.5 border border-[#262626] focus:outline-none focus:border-[#333] cursor-pointer"
-          >
-            {SUPPORTED_NETWORKS.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.name}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* From Token Input */}
-        <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#262626]">
+        <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#262626] overflow-hidden">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm text-[#737373]">From</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <input
               type="text"
               inputMode="decimal"
               placeholder="0.0"
               value={fromAmount}
               onChange={handleFromAmountChange}
-              className="text-4xl font-medium flex-1 bg-transparent text-white placeholder-[#262626] focus:outline-none tracking-tight"
+              className="text-4xl font-medium flex-1 min-w-0 bg-transparent text-white placeholder-[#262626] focus:outline-none tracking-tight"
             />
-            <TokenSelector
-              tokens={tokens}
-              selectedToken={fromToken}
-              onSelect={setFromToken}
-              excludeToken={toToken}
-              label="Select"
-            />
+            <div className="flex-shrink-0">
+              <TokenSelector
+                selectedToken={fromToken}
+                onSelect={(token) => {
+                  setFromToken(token);
+                  if (token.network !== network) {
+                    setNetwork(token.network);
+                  }
+                }}
+                excludeToken={toToken}
+                label="Select"
+                network={network}
+              />
+            </div>
           </div>
         </div>
 
@@ -208,11 +199,16 @@ export default function SwapInterface() {
               )}
             </div>
             <TokenSelector
-              tokens={tokens}
               selectedToken={toToken}
-              onSelect={setToToken}
+              onSelect={(token) => {
+                setToToken(token);
+                if (token.network !== network) {
+                  setNetwork(token.network);
+                }
+              }}
               excludeToken={fromToken}
               label="Select"
+              network={network}
             />
           </div>
         </div>

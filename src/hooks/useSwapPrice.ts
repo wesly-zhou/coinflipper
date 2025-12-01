@@ -43,10 +43,11 @@ export function useSwapPrice({
   const debouncedFromAmount = useDebounce(fromAmount, DEBOUNCE_DELAY);
 
   const fetchPrice = useCallback(async () => {
-    // Validate inputs
+    // Validate inputs - early return if any required field is missing
     if (!fromToken || !toToken || !debouncedFromAmount || debouncedFromAmount === '0') {
       setPrice(null);
       setError(null);
+      setLoading(false);
       return;
     }
 
@@ -54,6 +55,7 @@ export function useSwapPrice({
     if (fromToken.toLowerCase() === toToken.toLowerCase()) {
       setPrice(null);
       setError('Cannot swap same token');
+      setLoading(false);
       return;
     }
 
@@ -62,11 +64,13 @@ export function useSwapPrice({
       abortControllerRef.current.abort();
     }
 
+    // Get token metadata to validate the address
     const fromMetadata = getTokenByAddress(fromToken);
 
     if (!fromMetadata) {
       setError('Invalid from token address');
       setPrice(null);
+      setLoading(false);
       return;
     }
 
@@ -80,7 +84,6 @@ export function useSwapPrice({
         toToken,
         fromAmount: debouncedFromAmount,
         network,
-        fromDecimals: String(fromMetadata.decimals),
       });
 
       const response = await fetch(`/api/swap-price?${params}`, {
@@ -88,8 +91,14 @@ export function useSwapPrice({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch price');
+        let errorMessage = 'Failed to fetch price';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data: GetSwapPriceResult = await response.json();
@@ -105,7 +114,14 @@ export function useSwapPrice({
         return;
       }
       console.error('Error fetching swap price:', err);
-      setError(err.message || 'Failed to fetch price');
+      
+      // Try to parse error response if available
+      let errorMessage = 'Failed to fetch price';
+      if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setPrice(null);
     } finally {
       setLoading(false);
