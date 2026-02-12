@@ -11,6 +11,7 @@ interface UseSwapPriceParams {
   toToken: Address | null;
   fromAmount: string;
   network: SupportedNetwork;
+  taker?: Address | null;
   enabled?: boolean;
 }
 
@@ -27,6 +28,7 @@ export function useSwapPrice({
   toToken,
   fromAmount,
   network,
+  taker,
   enabled = true,
 }: UseSwapPriceParams): UseSwapPriceResult {
   const { getTokenByAddress } = useTokens(network);
@@ -86,6 +88,11 @@ export function useSwapPrice({
         network,
       });
 
+      // Pass taker for accurate balance/allowance checks
+      if (taker) {
+        params.set('taker', taker);
+      }
+
       const response = await fetch(`/api/swap-price?${params}`, {
         signal: abortControllerRef.current.signal,
       });
@@ -126,7 +133,7 @@ export function useSwapPrice({
     } finally {
       setLoading(false);
     }
-  }, [fromToken, toToken, debouncedFromAmount, network, getTokenByAddress]);
+  }, [fromToken, toToken, debouncedFromAmount, network, taker, getTokenByAddress]);
 
   // Fetch price when inputs change
   useEffect(() => {

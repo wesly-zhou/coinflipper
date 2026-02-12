@@ -1,9 +1,12 @@
 import Image from 'next/image';
-import Link from 'next/link';
 
 export function Logo() {
+  const handleClick = () => {
+    window.location.href = '/';
+  };
+
   return (
-    <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+    <button onClick={handleClick} className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
       <Image
         src="/logo.png"
         alt="CoinFlipper"
@@ -14,7 +17,7 @@ export function Logo() {
         priority
       />
       <h1 className="text-xl font-semibold text-white">CoinFlipper</h1>
-    </Link>
+    </button>
   );
 }
 

@@ -205,17 +205,23 @@ export interface SwapIssues {
   simulationIncomplete: boolean;
 }
 
+/**
+ * Serializable version of CreateSwapQuoteResult for API responses.
+ * Excludes the `execute` method (cannot be serialized to JSON).
+ */
+export type SwapQuoteResponse = Omit<CreateSwapQuoteResult, 'execute'>;
+
 // Transaction history tracking (not from CDP SDK)
 export interface SwapTransaction {
   id: string;
   fromToken: string;
   toToken: string;
-    fromAmount: string;
-    toAmount: string;
+  fromAmount: string;
+  toAmount: string;
   txHash?: string;
   status: 'pending' | 'completed' | 'failed';
-    timestamp: number;
+  timestamp: number;
   network: 'base' | 'ethereum';
-  }
+}
 
 export type SupportedNetwork = 'base' | 'ethereum';

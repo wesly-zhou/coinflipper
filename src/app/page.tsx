@@ -77,7 +77,7 @@ export default function Home() {
 
       {/* Swap Interface - Only show when a token is selected */}
       {selectedToken && (
-        <section id="swap-interface" className="max-w-[600px] mx-auto px-6 pb-20">
+        <section id="swap-interface" className="max-w-[600px] mx-auto px-6 pt-4 pb-20">
           <SwapInterface initialToToken={selectedToken} />
         </section>
       )}

@@ -142,6 +142,26 @@ export function formatNumber(num: number | string, decimals: number = 2): string
 }
 
 /**
+ * Encode ERC20 approve(address spender, uint256 amount) calldata.
+ * @param spender - The address to approve spending for
+ * @param amount - The exact amount to approve (atomic units as decimal string).
+ *                 If omitted, approves max uint256 (unlimited).
+ * @returns Hex-encoded calldata string
+ * @example encodeApproveCalldata("0x1234...", "1000000000000000000") // approve 1 ETH worth
+ */
+export function encodeApproveCalldata(spender: string, amount?: string): string {
+  // approve(address,uint256) selector = keccak256("approve(address,uint256)")[0:4]
+  const selector = '095ea7b3';
+  // Pad spender address to 32 bytes
+  const paddedSpender = spender.replace('0x', '').toLowerCase().padStart(64, '0');
+  // Use exact amount if provided, otherwise max uint256
+  const paddedAmount = amount
+    ? BigInt(amount).toString(16).padStart(64, '0')
+    : 'f'.repeat(64);
+  return `0x${selector}${paddedSpender}${paddedAmount}`;
+}
+
+/**
  * Shorten an address for display
  * Shows "0x" + 2 characters + "..." + 4 characters at the end
  * @param address - Full Ethereum address
