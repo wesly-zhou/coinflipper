@@ -252,9 +252,48 @@ export default function SwapInterface({ initialToToken = null }: SwapInterfacePr
 
       setTxHash(hash);
 
-      // Step 5: Wait for on-chain confirmation
+      // Step 5: Record the transaction as pending
+      const txRecord = {
+        walletAddress: primaryWallet.address,
+        fromToken: fromToken.address,
+        toToken: toToken.address,
+        fromSymbol: fromToken.symbol,
+        toSymbol: toToken.symbol,
+        fromAmount,
+        toAmount,
+        txHash: hash,
+        status: 'pending',
+        network,
+      };
+
+      // Fire-and-forget the initial record -- don't block the swap flow
+      fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(txRecord),
+      }).catch((err) => console.error('Failed to record transaction:', err));
+
+      // Step 6: Wait for on-chain confirmation
       setBusyText('Confirming...');
-      await waitForTransaction(provider, hash);
+      try {
+        await waitForTransaction(provider, hash);
+
+        // Update transaction status to completed
+        fetch('/api/transactions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ txHash: hash, status: 'completed' }),
+        }).catch((err) => console.error('Failed to update transaction status:', err));
+      } catch (confirmError) {
+        // Update transaction status to failed
+        fetch('/api/transactions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ txHash: hash, status: 'failed' }),
+        }).catch((err) => console.error('Failed to update transaction status:', err));
+
+        throw confirmError;
+      }
 
       // Success -- reset form
       setFromAmount('');

@@ -8,10 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.38.6",
+    "@prisma/adapter-pg": "^7.4.0",
+    "@prisma/client": "^7.4.0",
     "@privy-io/node": "^0.6.1",
     "@privy-io/react-auth": "^3.8.0",
     "@privy-io/server-auth": "^1.32.5",
@@ -20,6 +23,7 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.554.0",
     "next": "16.0.3",
+    "pg": "^8.18.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.4.1"
@@ -27,12 +31,16 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
     "prettier": "^3.7.1",
+    "prisma": "^7.4.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

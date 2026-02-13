@@ -1,0 +1,31 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model SwapTransaction {
+  id            String   @id @default(uuid())
+  walletAddress String   @map("wallet_address")
+  fromToken     String   @map("from_token")
+  toToken       String   @map("to_token")
+  fromSymbol    String   @map("from_symbol")
+  toSymbol      String   @map("to_symbol")
+  fromAmount    String   @map("from_amount")
+  toAmount      String   @map("to_amount")
+  txHash        String?  @unique @map("tx_hash")
+  status        String   @default("pending")
+  network       String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([walletAddress])
+  @@index([walletAddress, createdAt(sort: Desc)])
+  @@map("swap_transactions")
+}
